@@ -1,0 +1,43 @@
+name: Check Loophole Status
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check_loophole:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          python3 <<EOF
+          import requests, json
+
+          url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main/status.json"
+          res = requests.get(url)
+          if res.status_code == 200:
+              data = res.json()
+              if data.get("loophole_active") == True:
+                  msg = "⚠️ Loophole ACTIVE! Go change PFP now 😈"
+                  bot_token = "${{ secrets.BOT_TOKEN }}"
+                  chat_id = "${{ secrets.CHAT_ID }}"
+                  telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                  payload = {"chat_id": chat_id, "text": msg}
+                  requests.post(telegram_url, data=payload)
+          EOF
