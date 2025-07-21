@@ -1,4 +1,6 @@
 {
   "loophole_active": true,
-  "region": "USA"
+  "region": "USA",
+  "screenshot": "https://i.imgur.com/abcd1234.jpg",
+  "method": "1. Go to Instagram\n2. Tap Edit Profile\n3. Tap Profile Picture\n4. Select from Gallery\n5. Save\n6. Quickly switch app"
 }
