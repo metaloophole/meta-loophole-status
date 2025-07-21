@@ -1,18 +1,37 @@
-- name: Run Script (Final Munna Edition)
-  run: |
-    python3 <<EOF
-import requests
+name: Check Loophole Status
 
-url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main/status.json"
-res = requests.get(url)
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
-if res.status_code == 200:
-    data = res.json()
-    if data.get("loophole_active") == True:
-        msg = "⚠️ Loophole ACTIVE! Go change PFP now 😈"
-        bot_token = "7588713286:AAHF_S7ZxD62YI3JDoPtdnvroiOWbA-M2CQ"
-        chat_id = "-1002814683347"
-        telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": msg}
-        requests.post(telegram_url, data=payload)
-EOF
+jobs:
+  check_loophole:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Script (Final Munna Edition)
+        run: |
+          echo "import requests" > check.py
+          echo "url = 'https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main/status.json'" >> check.py
+          echo "res = requests.get(url)" >> check.py
+          echo "if res.status_code == 200:" >> check.py
+          echo "    data = res.json()" >> check.py
+          echo "    if data.get('loophole_active') == True:" >> check.py
+          echo "        msg = '⚠️ Loophole ACTIVE! Go change PFP now 😈'" >> check.py
+          echo "        bot_token = '7588713286:AAHF_S7ZxD62YI3JDoPtdnvroiOWbA-M2CQ'" >> check.py
+          echo "        chat_id = '-1002814683347'" >> check.py
+          echo "        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'" >> check.py
+          echo "        payload = {'chat_id': chat_id, 'text': msg}" >> check.py
+          echo "        requests.post(telegram_url, data=payload)" >> check.py
+          python3 check.py
