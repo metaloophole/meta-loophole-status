@@ -2,7 +2,7 @@ name: Check Loophole Status
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/5 * * * *'  # Every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -22,36 +22,39 @@ jobs:
 
       - name: Run Loophole Bot
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          GH_PAT: ${{ secrets.GH_PAT }}
+          BOT_TOKEN: 7588713286:AAHF_S7ZxD62YI3JDoPtdnvroiOWbA-M2CQ
+          CHAT_ID: -1002814683347
         run: |
           python3 <<EOF
           import requests, os
           from telegram import Bot
-          
+
           bot = Bot(token=os.environ['BOT_TOKEN'])
           chat_id = os.environ['CHAT_ID']
-          
-          headers = {'Authorization': f"token {os.environ['GH_PAT']}"}
-          repo_url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
-          
-          status = requests.get(f"{repo_url}/status.json").json()
-          
-          if status.get("loophole_active") == True and status.get("region", "").lower() == "usa":
-              message = "⚠️ Loophole ACTIVE! Go change PFP now 😈"
 
-              # Send method if exists
-              method = requests.get(f"{repo_url}/method.txt")
+          base = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
+          
+          # Fetch JSON
+          try:
+              data = requests.get(f"{base}/status.json").json()
+          except:
+              exit()
+
+          if data.get("loophole_active") and data.get("region", "").lower() == "usa":
+              msg = "⚠️ *Loophole ACTIVE!*\nGo change PFP now 😈"
+
+              # Add Method
+              method = requests.get(f"{base}/method.txt")
               if method.status_code == 200:
-                  message += f"\n\n📄 *Method:*\n{method.text}"
+                  msg += f"\n\n📄 *Method:*\n`{method.text.strip()}`"
 
-              bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown")
+              bot.send_message(chat_id=chat_id, text=msg, parse_mode="Markdown")
 
-              # Send proof image if available
-              proof = requests.get(f"{repo_url}/proof.jpg")
+              # Add Proof if exists
+              proof = requests.get(f"{base}/proof.jpg")
               if proof.status_code == 200:
                   with open("proof.jpg", "wb") as f:
                       f.write(proof.content)
-                  bot.send_photo(chat_id=chat_id, photo=open("proof.jpg", "rb"))
+                  with open("proof.jpg", "rb") as photo:
+                      bot.send_photo(chat_id=chat_id, photo=photo)
           EOF
