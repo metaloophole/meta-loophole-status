@@ -15,23 +15,43 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.x
+          python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install requests python-telegram-bot
 
-      - name: Run Script (Final Munna Edition)
+      - name: Run Loophole Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          echo "import requests" > check.py
-          echo "url = 'https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main/status.json'" >> check.py
-          echo "res = requests.get(url)" >> check.py
-          echo "if res.status_code == 200:" >> check.py
-          echo "    data = res.json()" >> check.py
-          echo "    if data.get('loophole_active') == True:" >> check.py
-          echo "        msg = '⚠️ Loophole ACTIVE! Go change PFP now 😈'" >> check.py
-          echo "        bot_token = '7588713286:AAHF_S7ZxD62YI3JDoPtdnvroiOWbA-M2CQ'" >> check.py
-          echo "        chat_id = '-1002814683347'" >> check.py
-          echo "        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'" >> check.py
-          echo "        payload = {'chat_id': chat_id, 'text': msg}" >> check.py
-          echo "        requests.post(telegram_url, data=payload)" >> check.py
-          python3 check.py
+          python3 <<EOF
+          import requests, os
+          from telegram import Bot
+          
+          bot = Bot(token=os.environ['BOT_TOKEN'])
+          chat_id = os.environ['CHAT_ID']
+          
+          headers = {'Authorization': f"token {os.environ['GH_PAT']}"}
+          repo_url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
+          
+          status = requests.get(f"{repo_url}/status.json").json()
+          
+          if status.get("loophole_active") == True and status.get("region", "").lower() == "usa":
+              message = "⚠️ Loophole ACTIVE! Go change PFP now 😈"
+
+              # Send method if exists
+              method = requests.get(f"{repo_url}/method.txt")
+              if method.status_code == 200:
+                  message += f"\n\n📄 *Method:*\n{method.text}"
+
+              bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown")
+
+              # Send proof image if available
+              proof = requests.get(f"{repo_url}/proof.jpg")
+              if proof.status_code == 200:
+                  with open("proof.jpg", "wb") as f:
+                      f.write(proof.content)
+                  bot.send_photo(chat_id=chat_id, photo=open("proof.jpg", "rb"))
+          EOF
