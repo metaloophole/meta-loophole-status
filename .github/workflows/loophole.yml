@@ -2,7 +2,7 @@ name: Check Loophole Status
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Runs every 5 minutes
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,36 +26,51 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
+          echo "🔍 Running Loophole Check Script..."
           python3 <<EOF
-          import requests, os
-          from telegram import Bot
-          from telegram.error import TelegramError
+import requests, os
+from telegram import Bot
+from telegram.error import TelegramError
 
-          bot = Bot(token=os.environ['BOT_TOKEN'])
-          chat_id = os.environ['CHAT_ID']
-          repo_url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
+# Init bot
+bot_token = os.environ.get("BOT_TOKEN")
+chat_id = os.environ.get("CHAT_ID")
+bot = Bot(token=bot_token)
 
-          def notify(text):
-              try:
-                  bot.send_message(chat_id=chat_id, text=f"🪩 Loophole Bot:\n{text}", parse_mode="Markdown")
-              except TelegramError as e:
-                  print(f"Telegram Error: {e}")
+print(f"🔑 BOT_TOKEN: {bot_token[:10]}...")  # partial for debug
+print(f"📢 CHAT_ID: {chat_id}")
 
-          try:
-              status = requests.get(f"{repo_url}/status.json").json()
-          except Exception as e:
-              notify(f"*Failed to load status.json:* `{e}`")
-              raise SystemExit()
+repo_url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
 
-          if status.get("loophole_active") == True and status.get("region", "").lower() == "usa":
-              message = "⚠️ *Loophole ACTIVE for USA!*\nChange your PFP now 😈"
+def notify(text):
+    try:
+        print("📤 Sending Telegram message...")
+        bot.send_message(chat_id=chat_id, text=f"🪩 Loophole Bot:\n{text}", parse_mode="Markdown")
+        print("✅ Message sent.")
+    except TelegramError as e:
+        print(f"❌ Telegram Error: {e}")
+    except Exception as e:
+        print(f"❌ Other Error: {e}")
 
-              # Include method if available
-              method_req = requests.get(f"{repo_url}/method.txt")
-              if method_req.status_code == 200 and method_req.text.strip():
-                  message += f"\n\n📄 *Method:*\n`{method_req.text.strip()}`"
+try:
+    response = requests.get(f"{repo_url}/status.json")
+    print(f"🌐 status.json HTTP {response.status_code}")
+    status = response.json()
+    print(f"📦 Status Loaded: {status}")
+except Exception as e:
+    notify(f"*Failed to load status.json:* `{e}`")
+    raise SystemExit()
 
-              notify(message)
-          else:
-              print("Loophole not active or not USA.")
-          EOF
+if status.get("loophole_active") == True and status.get("region", "").lower() == "usa":
+    message = "⚠️ *Loophole ACTIVE for USA!*\nChange your PFP now 😈"
+    method_url = f"{repo_url}/method.txt"
+
+    method_req = requests.get(method_url)
+    print(f"📄 method.txt HTTP {method_req.status_code}")
+    if method_req.status_code == 200 and method_req.text.strip():
+        message += f"\n\n📄 *Method:*\n`{method_req.text.strip()}`"
+
+    notify(message)
+else:
+    print("ℹ️ Loophole not active or not for USA.")
+EOF
