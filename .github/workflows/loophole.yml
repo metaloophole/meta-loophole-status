@@ -22,39 +22,53 @@ jobs:
 
       - name: Run Loophole Bot
         env:
-          BOT_TOKEN: 7588713286:AAHF_S7ZxD62YI3JDoPtdnvroiOWbA-M2CQ
-          CHAT_ID: -1002814683347
+          BOT_TOKEN: "7588713286:AAHF_S7ZxD62YI3JDoPtdnvroiOWbA-M2CQ"
+          CHAT_ID: "-1002814683347"
+          GH_PAT: "ghp_YOUR_REAL_GITHUB_PAT_HERE"  # Yaha tera PAT daal
         run: |
           python3 <<EOF
-          import requests, os
+          import requests, os, json
           from telegram import Bot
+          from telegram.error import TelegramError
 
           bot = Bot(token=os.environ['BOT_TOKEN'])
           chat_id = os.environ['CHAT_ID']
+          repo_url = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
 
-          base = "https://raw.githubusercontent.com/metaloophole/meta-loophole-status/main"
-          
-          # Fetch JSON
+          def notify(text):
+              try:
+                  bot.send_message(chat_id=chat_id, text=f"🪩 Loophole Bot:\n{text}", parse_mode="Markdown")
+              except TelegramError as e:
+                  print(f"Telegram Error: {e}")
+
           try:
-              data = requests.get(f"{base}/status.json").json()
-          except:
-              exit()
+              status_req = requests.get(f"{repo_url}/status.json")
+              status = status_req.json()
+          except Exception as e:
+              notify(f"*Failed to load status.json:* `{e}`")
+              raise SystemExit()
 
-          if data.get("loophole_active") and data.get("region", "").lower() == "usa":
-              msg = "⚠️ *Loophole ACTIVE!*\nGo change PFP now 😈"
+          if status.get("loophole_active") == True and status.get("region", "").lower() == "usa":
+              message = "⚠️ *Loophole ACTIVE for USA!*\nChange your PFP now 😈"
 
-              # Add Method
-              method = requests.get(f"{base}/method.txt")
-              if method.status_code == 200:
-                  msg += f"\n\n📄 *Method:*\n`{method.text.strip()}`"
+              # Method fetch
+              method_req = requests.get(f"{repo_url}/method.txt")
+              if method_req.status_code == 200 and method_req.text.strip():
+                  message += f"\n\n📄 *Method:*\n`{method_req.text.strip()}`"
 
-              bot.send_message(chat_id=chat_id, text=msg, parse_mode="Markdown")
+              notify(message)
 
-              # Add Proof if exists
-              proof = requests.get(f"{base}/proof.jpg")
-              if proof.status_code == 200:
+              # Proof photo
+              proof_req = requests.get(f"{repo_url}/proof.jpg")
+              if proof_req.status_code == 200:
                   with open("proof.jpg", "wb") as f:
-                      f.write(proof.content)
-                  with open("proof.jpg", "rb") as photo:
-                      bot.send_photo(chat_id=chat_id, photo=photo)
+                      f.write(proof_req.content)
+                  try:
+                      bot.send_photo(chat_id=chat_id, photo=open("proof.jpg", "rb"))
+                  except TelegramError as e:
+                      notify(f"*Failed to send screenshot:* `{e}`")
+              else:
+                  notify("❗ *Proof image not found or invalid URL.*")
+          else:
+              print("Loophole not active or not USA.")
           EOF
