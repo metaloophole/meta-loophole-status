@@ -27,8 +27,7 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          python3 -c "
-import requests, os
+          python3 -c """import requests, os
 from telegram import Bot
 from telegram.error import TelegramError
 
@@ -57,5 +56,4 @@ if status.get('loophole_active') == True and status.get('region', '').lower() ==
 
     notify(message)
 else:
-    print('Loophole not active or not USA.')
-"
+    print('Loophole not active or not USA.')"""
