@@ -21,14 +21,9 @@ jobs:
       - name: Install dependencies
         run: pip install requests python-telegram-bot
 
-      - name: Run Loophole Bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          GH_PAT: ${{ secrets.GH_PAT }}
+      - name: Create Python Script
         run: |
-          cat > loophole_bot.py << EOF
-import requests, os
+          echo 'import requests, os
 from telegram import Bot
 from telegram.error import TelegramError
 
@@ -57,6 +52,11 @@ if status.get("loophole_active") == True and status.get("region", "").lower() ==
 
     notify(message)
 else:
-    print("Loophole not active or not USA.")
-EOF
-          python3 loophole_bot.py
+    print("Loophole not active or not USA.")' > run_bot.py
+
+      - name: Run the Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: python3 run_bot.py
