@@ -1,16 +1,16 @@
-name: Retry Loophole Bot
+name: Check Loophole Status
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   check_loophole:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repo
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -18,17 +18,18 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install requirements
+      - name: Install dependencies
         run: pip install requests python-telegram-bot
 
-      - name: Run Loophole Script
+      - name: Run Loophole Bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           echo "
-import requests, os
+import requests
+import os
 from telegram import Bot
 from telegram.error import TelegramError
 
@@ -58,5 +59,4 @@ if status.get('loophole_active') == True and status.get('region', '').lower() ==
     notify(message)
 else:
     print('Loophole not active or not USA.')
-" > loophole.py
-          python3 loophole.py
+" > loophole_bot.py && python3 loophole_bot.py
